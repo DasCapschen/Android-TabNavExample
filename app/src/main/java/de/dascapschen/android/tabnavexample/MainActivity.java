@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public float getInterpolation(float input)
             {
-                Log.i("INTERP", String.format("Called with %f", input));
+                //Log.i("INTERP", String.format("Called with %f", input));
                 return currentBottomSheetPosition;
             }
         };
@@ -92,12 +92,12 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onSlide(@NonNull View view, float v)
             {
-                Log.i("SLIDE", String.format("CALLED WITH: %f", v));
+                //Log.i("SLIDE", String.format("CALLED WITH: %f", v));
                 if(bottomSheetOpen)
                 {
                     if(!animationRunning)
                     {
-                        Log.i("ANIM", "GO");
+                        //Log.i("ANIM", "GO");
                         TransitionManager.go(collapsedScene, transition);
                         animationRunning = true;
                     }
@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity
                 {
                     if(!animationRunning)
                     {
-                        Log.i("ANIM", "GO");
+                        //Log.i("ANIM", "GO");
                         TransitionManager.go(openScene, transition);
                         animationRunning = true;
                     }
