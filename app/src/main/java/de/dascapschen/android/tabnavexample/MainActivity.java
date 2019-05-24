@@ -7,6 +7,7 @@ import android.support.design.widget.TabLayout;
 import android.support.transition.AutoTransition;
 import android.support.transition.Transition;
 import android.support.transition.TransitionManager;
+import android.support.transition.TransitionSet;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,6 +25,13 @@ public class MainActivity extends AppCompatActivity
     float currentBottomSheetPosition = 0.f;
     boolean bottomSheetOpen = false;
     boolean animationRunning = false;
+
+    Scene bottomSheetCollapsedScene;
+    Scene bottomSheetOpenScene;
+    ViewGroup sceneRoot;
+    AutoTransition bottomSheetTransition;
+    TimeInterpolator bottomSheetInterpolator;
+    BottomSheetBehavior bottomSheet;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -47,13 +55,13 @@ public class MainActivity extends AppCompatActivity
 
     private void setupBottomSheetTransition()
     {
-        final ViewGroup sceneRoot = (ViewGroup) findViewById(R.id.sceneRoot);
-        final Scene collapsedScene = Scene.getSceneForLayout(sceneRoot, R.layout.bottomsheet_collapsed, this);
-        final Scene openScene = Scene.getSceneForLayout(sceneRoot, R.layout.bottomsheet_open, this);
+        sceneRoot = (ViewGroup) findViewById(R.id.sceneRoot);
+        bottomSheetCollapsedScene = Scene.getSceneForLayout(sceneRoot, R.layout.bottomsheet_collapsed, this);
+        bottomSheetOpenScene = Scene.getSceneForLayout(sceneRoot, R.layout.bottomsheet_open, this);
 
-        final Transition transition = new AutoTransition();
+        bottomSheetTransition = new AutoTransition();
 
-        final TimeInterpolator interp = new TimeInterpolator()
+        bottomSheetInterpolator = new TimeInterpolator()
         {
             @Override
             public float getInterpolation(float input)
@@ -63,42 +71,62 @@ public class MainActivity extends AppCompatActivity
             }
         };
 
-        transition.setInterpolator(interp);
-        transition.setDuration(99999999); //TODO: this is hacky af
+        bottomSheetTransition.setInterpolator(bottomSheetInterpolator);
+        bottomSheetTransition.setDuration(999999999); //TODO: this is hacky af
 
-        final BottomSheetBehavior bsb = BottomSheetBehavior.from(findViewById(R.id.sceneRoot));
+        //run all animations at the same time ; fixes closing anim not working
+        //because auto anim is a transition SET
+        //first fade out removed items, then translate items, then fade in new items = 3 anims
+        bottomSheetTransition.setOrdering( TransitionSet.ORDERING_TOGETHER );
 
-        bsb.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback()
-        {
+        bottomSheet = BottomSheetBehavior.from(findViewById(R.id.sceneRoot));
+
+        bottomSheet.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View view, int i)
             {
-                if( i == BottomSheetBehavior.STATE_EXPANDED )
+                String state = "";
+                switch( i )
                 {
-                    //TransitionManager.go(openScene, transition);
-                    bottomSheetOpen = true;
-                    animationRunning = false;
-                    TransitionManager.endTransitions(sceneRoot);
+                    case BottomSheetBehavior.STATE_COLLAPSED:
+                        bottomSheetOpen = false;
+                        animationRunning = false;
+                        TransitionManager.endTransitions(sceneRoot);
+                        state = "collapsed";
+                        break;
+                    case BottomSheetBehavior.STATE_EXPANDED:
+                        bottomSheetOpen = true;
+                        animationRunning = false;
+                        TransitionManager.endTransitions(sceneRoot);
+                        state = "expanded";
+                        break;
+                    case BottomSheetBehavior.STATE_DRAGGING:
+                        state = "dragging";
+                        break;
+                    case BottomSheetBehavior.STATE_HALF_EXPANDED:
+                        state = "half expanded";
+                        break;
+                    case BottomSheetBehavior.STATE_SETTLING:
+                        state = "settling";
+                        break;
+                    case BottomSheetBehavior.STATE_HIDDEN:
+                        state = "hidden";
+                        break;
                 }
-                if( i == BottomSheetBehavior.STATE_COLLAPSED )
-                {
-                    //TransitionManager.go(collapsedScene, transition);
-                    bottomSheetOpen = false;
-                    animationRunning = false;
-                    TransitionManager.endTransitions(sceneRoot);
-                }
+
+                Log.i("STATE", "CHANGED TO: " + state);
             }
 
             @Override
             public void onSlide(@NonNull View view, float v)
             {
-                //Log.i("SLIDE", String.format("CALLED WITH: %f", v));
+                Log.i("SLIDE", String.format("CALLED WITH: %f", v));
                 if(bottomSheetOpen)
                 {
                     if(!animationRunning)
                     {
                         //Log.i("ANIM", "GO");
-                        TransitionManager.go(collapsedScene, transition);
+                        TransitionManager.go(bottomSheetCollapsedScene, bottomSheetTransition);
                         animationRunning = true;
                     }
                     currentBottomSheetPosition = 1-v;
@@ -108,16 +136,26 @@ public class MainActivity extends AppCompatActivity
                     if(!animationRunning)
                     {
                         //Log.i("ANIM", "GO");
-                        TransitionManager.go(openScene, transition);
+                        TransitionManager.go(bottomSheetOpenScene, bottomSheetTransition);
                         animationRunning = true;
                     }
                     currentBottomSheetPosition = v;
                 }
             }
         });
-
-
     }
 
+    public void bottomSheetTapped(View view)
+    {
+        if(!bottomSheetOpen)
+        {
+            bottomSheet.setState( BottomSheetBehavior.STATE_EXPANDED );
+        }
+    }
+
+    public void btnCloseBottomSheetTapped(View btn)
+    {
+        bottomSheet.setState( BottomSheetBehavior.STATE_COLLAPSED );
+    }
 
 }
